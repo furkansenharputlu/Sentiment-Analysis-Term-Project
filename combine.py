@@ -4,7 +4,7 @@
 import string
 
 
-with open("combined-train",'w') as comb:
+with open("combined-train.txt",'w') as comb:
 	with open("Train/negative-train", 'r') as f:
 		text = f.read()
 		text = text.translate(str.maketrans('', '', string.punctuation))

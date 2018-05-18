@@ -24,6 +24,7 @@ from sklearn.naive_bayes import MultinomialNB
 # from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.feature_extraction.text import TfidfVectorizer
 from TurkishStemmer import TurkishStemmer
+import numpy as np
 
 
 names = [
@@ -75,16 +76,18 @@ y=df.liked
 X=vectorizer.fit_transform(df.text)
 
 X = StandardScaler(with_mean=False).fit_transform(X)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.4, random_state=42)
 
 
 for name, clf in zip(names, classifiers):
     time_begin = time.time()
 
     try:
-        clf.fit(X_train, y_train)
-        score = clf.score(X_test, y_test) * 100
-        print (name, score, "% accuracy in ", time.time()-time_begin, "seconds")
+        clf.fit(X, y)
+        tweet=np.array(['Boğaziçinin çok kötü berbat'])
+
+        tweet_vector=vectorizer.transform(tweet)
+
+        print clf.predict(tweet_vector)
         # train_predictions = clf.predict(X_test)
         # acc = accuracy_score(y_test, train_predictions)
         # print acc
