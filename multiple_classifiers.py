@@ -66,7 +66,7 @@ def tokenize(text):
 
 
 
-df=pd.read_csv("combined-train.txt",sep='\t',names=['liked','id','text'],engine='python',nrows=7493)
+df=pd.read_csv("equal_num_sent_combined-train.txt",sep='\t',names=['liked','id','text'],engine='python',nrows=7493)
 
 stopwords=stopwords.words('turkish')
 vectorizer=TfidfVectorizer(tokenizer=tokenize,use_idf=True,lowercase=True,strip_accents='ascii',stop_words=stopwords)
@@ -74,7 +74,7 @@ vectorizer=TfidfVectorizer(tokenizer=tokenize,use_idf=True,lowercase=True,strip_
 y=df.liked
 X=vectorizer.fit_transform(df.text)
 
-X = StandardScaler(with_mean=False).fit_transform(X)
+# X = StandardScaler(with_mean=False).fit_transform(X)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.4, random_state=42)
 
 

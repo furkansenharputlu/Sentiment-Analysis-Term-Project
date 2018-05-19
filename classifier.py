@@ -2,56 +2,61 @@
 # -*- coding: utf-8 -*-
 
 
-import time
+from  time import time
 
 import pandas as pd
 
 import nltk
 
+from collections import Counter
+
 from nltk.corpus import stopwords
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-# from sklearn.metrics import accuracy_score
-# from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.svm import LinearSVC
+
+# from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import MultinomialNB
-# from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.feature_extraction.text import TfidfVectorizer
 from TurkishStemmer import TurkishStemmer
-import numpy as np
 
 
 names = [
+        # "QDA",
         "Nearest Neighbors",
-         "Linear SVM", "RBF SVM",
-         "Decision Tree",
-         "Random Forest",
-         "Neural Net",
-         "AdaBoost",
-         "Naive Bayes",
-         # "QDA"
+        "LinearSVC",
+        "RBF SVM",
+        "Decision Tree",
+        "Random Forest",
+        "Neural Net",
+        "AdaBoost",
+        "Naive Bayes"
          ]
 
 classifiers = [
-    KNeighborsClassifier(3),
-    SVC(kernel="linear", C=0.025),
-    SVC(gamma=2, C=1),
+    # QuadraticDiscriminantAnalysis(),
+    KNeighborsClassifier(),
+    LinearSVC(multi_class="crammer_singer"),
+    LinearSVC(C=1),
     # GaussianProcessClassifier(1.0 * RBF(1.0)),
     DecisionTreeClassifier(max_depth=5),
-    RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+    RandomForestClassifier(max_depth=5, n_estimators=10),
     MLPClassifier(alpha=1),
     AdaBoostClassifier(),
     MultinomialNB(),
-    # QuadraticDiscriminantAnalysis()
 ]
 
+coefficients = [.51, 0, .59, .47, 0, .59, .50, .59]
+s =sum(coefficients)
+coefficients = [x/s for x in coefficients]
+
+
 stemmer=TurkishStemmer()
+
 
 def stem_tokens(tokens, stemmer):
     stemmed = []
@@ -66,31 +71,59 @@ def tokenize(text):
     return stems
 
 
+def multiple_classfier_prediction(X, y):
+    # results = [0]*len(query_tweets)
+    results = [Counter() for _ in range(len(query_tweets))]
+    for i, (name, clf) in enumerate(zip(names, classifiers)):
+        time_begin = time()
+        
+        try:
+            clf.fit(X, y)
+            
+            tweet_vector = vectorizer.transform(query_tweets)
+            
+            temp_results = clf.predict(tweet_vector)
+            print(temp_results, name, 'in', time_begin - time(), 'seconds')
+            
+            for j in range(len(results)):
+                results[j][temp_results[j]] += coefficients[i]
+                # results[j] += temp_results[j] * coefficients[i]
+                
+        
+        except TypeError as e:
+            print(name, e)
+        print
+            
+    return results
+    
 
-df=pd.read_csv("combined-train.txt",sep='\t',names=['liked','id','text'],engine='python',nrows=7493)
+if __name__ == '__main__':
 
-stopwords=stopwords.words('turkish')
-vectorizer=TfidfVectorizer(tokenizer=tokenize,use_idf=True,lowercase=True,strip_accents='ascii',stop_words=stopwords)
+    with open("combined-train.txt", "r") as ts:
+        lines = ts.readlines()
+        _nrows = len(lines)
+    
+    df=pd.read_csv("combined-train.txt",sep='\t',names=['liked','id','text'],engine='python',nrows=_nrows)
+    
+    stopwords=stopwords.words('turkish')
+    vectorizer=TfidfVectorizer(tokenizer=tokenize,use_idf=True,lowercase=True,strip_accents='ascii',stop_words=stopwords)
+    
+    y=df.liked
+    X=vectorizer.fit_transform(df.text)
+    
+    
+    with open("input.txt", "r") as input_file:
+        query_tweets = input_file.readlines()
 
-y=df.liked
-X=vectorizer.fit_transform(df.text)
+    results = multiple_classfier_prediction(X,y)
+    
+    print("results: ")
+    for res in results:
+        print(res.most_common(3))
 
-X = StandardScaler(with_mean=False).fit_transform(X)
+    
+    with open('output.txt','w') as output_file:
+        for result, query_tweet in  zip(results,query_tweets):
+            output_file.write(str(result.most_common(1)[0][0]) + '\t\t\t' + query_tweet)
 
-
-for name, clf in zip(names, classifiers):
-    time_begin = time.time()
-
-    try:
-        clf.fit(X, y)
-        tweet=np.array(['Boğaziçinin çok kötü berbat'])
-
-        tweet_vector=vectorizer.transform(tweet)
-
-        print clf.predict(tweet_vector)
-        # train_predictions = clf.predict(X_test)
-        # acc = accuracy_score(y_test, train_predictions)
-        # print acc
-
-    except TypeError as e:
-        print (name, e)#, "performance in ", time.time() - time_begin, "seconds"
+        
