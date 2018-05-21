@@ -4,6 +4,8 @@
 
 from  time import time
 
+import sys
+
 import pandas as pd
 
 import nltk
@@ -71,7 +73,7 @@ def tokenize(text):
     return stems
 
 
-def multiple_classfier_prediction(X, y):
+def multiple_classfier_prediction(X, y,query_tweets):
     # results = [0]*len(query_tweets)
     results = [Counter() for _ in range(len(query_tweets))]
     for i, (name, clf) in enumerate(zip(names, classifiers)):
@@ -83,7 +85,7 @@ def multiple_classfier_prediction(X, y):
             tweet_vector = vectorizer.transform(query_tweets)
             
             temp_results = clf.predict(tweet_vector)
-            print(temp_results, name, 'in', time_begin - time(), 'seconds')
+            print(temp_results, name, 'in', time() - time_begin, 'seconds')
             
             for j in range(len(results)):
                 results[j][temp_results[j]] += coefficients[i]
@@ -95,15 +97,26 @@ def multiple_classfier_prediction(X, y):
         print
             
     return results
-    
+
+
 
 if __name__ == '__main__':
+    
+    
+    try:
+        train_file = sys.argv[1]
+        inputtxt = sys.argv[2]
+        outputtxt = sys.argv[3]
+    except:
+        train_file = "combined-train.txt"
+        inputtxt = "input.txt"
+        outputtxt = 'output.txt'
 
-    with open("combined-train.txt", "r") as ts:
+    with open(train_file, "r") as ts:
         lines = ts.readlines()
         _nrows = len(lines)
     
-    df=pd.read_csv("combined-train.txt",sep='\t',names=['liked','id','text'],engine='python',nrows=_nrows)
+    df=pd.read_csv(train_file,sep='\t',names=['liked','id','text'],engine='python',nrows=_nrows)
     
     stopwords=stopwords.words('turkish')
     vectorizer=TfidfVectorizer(tokenizer=tokenize,use_idf=True,lowercase=True,strip_accents='ascii',stop_words=stopwords)
@@ -112,18 +125,19 @@ if __name__ == '__main__':
     X=vectorizer.fit_transform(df.text)
     
     
-    with open("input.txt", "r") as input_file:
+    with open(inputtxt, "r") as input_file:
         query_tweets = input_file.readlines()
 
-    results = multiple_classfier_prediction(X,y)
+    results = multiple_classfier_prediction(X, y,query_tweets)
     
     print("results: ")
-    for res in results:
-        print(res.most_common(3))
+    # for res in results:
+    #     print(res.most_common(3))
 
     
-    with open('output.txt','w') as output_file:
+    with open(outputtxt,'w') as output_file:
         for result, query_tweet in  zip(results,query_tweets):
             output_file.write(str(result.most_common(1)[0][0]) + '\t\t\t' + query_tweet)
-
-        
+            
+    
+    
